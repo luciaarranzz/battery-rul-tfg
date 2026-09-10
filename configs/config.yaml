@@ -1,0 +1,34 @@
+# Configuración del pipeline. train.py y evaluate.py leen este fichero.
+
+seed: 42
+
+data:
+  # "synthetic" usa el generador de datos de placeholder (src/data/synthetic.py).
+  # Cambia a otro valor (p. ej. "nasa") cuando tengas un loader real en src/data/.
+  source: synthetic
+  n_batteries: 24
+  n_cycles: 300
+  eol_threshold: 0.80        # umbral de fin de vida (80% de capacidad nominal)
+  # Baterías reservadas para test (por id). Con datos sintéticos se generan
+  # ids battery_00 .. battery_23; aquí reservamos un 25% aprox.
+  test_batteries: ["battery_18", "battery_19", "battery_20", "battery_21", "battery_22", "battery_23"]
+
+target: soh                   # "soh" o "rul"
+
+models:
+  random_forest:
+    n_estimators: 300
+    max_depth: 12
+  xgboost:
+    n_estimators: 300
+    max_depth: 6
+    learning_rate: 0.05
+  lstm:
+    hidden_size: 32
+    n_layers: 1
+    sequence_length: 10
+    epochs: 80
+    lr: 0.005
+
+output:
+  results_dir: results
