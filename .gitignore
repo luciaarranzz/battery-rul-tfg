@@ -1,0 +1,26 @@
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Datos (no versionar datasets, pueden ser grandes)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Resultados generados
+results/*
+!results/.gitkeep
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
