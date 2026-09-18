@@ -71,6 +71,7 @@ def generate_dataset(n_batteries: int = 24, n_cycles: int = 300, seed: int = 42)
                 "cycle": cycle,
                 "capacity": NOMINAL_CAPACITY_AH * soh,
                 "soh": soh * 100,
+                "ambient_temp": base_temp,
                 "charge_time": charge_time,
                 "time_arr": time_arr,
                 "voltage_arr": voltage_arr,

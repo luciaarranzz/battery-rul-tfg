@@ -12,8 +12,7 @@ en cuanto el loader correspondiente produzca el mismo formato interno
 import numpy as np
 import pandas as pd
 
-FEATURE_COLUMNS = ["discharge_duration", "charge_time", "t_mean", "t_max", "voltage_drop_rate"]
-
+FEATURE_COLUMNS = ["discharge_duration", "charge_time", "t_mean", "t_max", "voltage_drop_rate", "ambient_temp"]
 
 def discharge_duration(time_arr) -> float:
     """Duración total del ciclo de descarga, en segundos."""
@@ -45,6 +44,7 @@ def extract_health_indicators(cycle_row: pd.Series) -> dict:
         "t_mean": float(np.mean(temp_arr)) if len(temp_arr) else 0.0,
         "t_max": float(np.max(temp_arr)) if len(temp_arr) else 0.0,
         "voltage_drop_rate": voltage_drop_rate(cycle_row["voltage_arr"], cycle_row["time_arr"]),
+        "ambient_temp": float(cycle_row["ambient_temp"]),
     }
 
 

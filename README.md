@@ -13,7 +13,7 @@ Un pipeline de Machine Learning en Python para dos problemas relacionados:
 
 El repositorio está organizado como un pipeline modular (carga de datos → features → modelos → evaluación), pensado para poder explicarse capítulo a capítulo en la memoria del TFG.
 
-La dirección final acordada con el tutor (César) es un **dashboard de monitorización** que simula la conexión con un vehículo eléctrico y estima el SOH a partir de datos tipo BMS (Battery Management System) — no una app de "sube un CSV y te doy una predicción". Por eso todo el pipeline, desde la carga de datos hasta las features, usa **solo señales que un BMS real proporcionaría** (voltaje, corriente, temperatura y tiempo durante la descarga): nunca datos exclusivos de laboratorio como la espectroscopía de impedancia (EIS) o la curva completa capacidad-voltaje.
+La dirección final acordada con el tutor (César) es un **dashboard de monitorización** (pendiente de construir, ver "Próximos pasos") que simula la conexión con un vehículo eléctrico y estima el SOH a partir de datos tipo BMS (Battery Management System) — no una app de "sube un CSV y te doy una predicción". Por eso todo el pipeline, desde la carga de datos hasta las features, usa **solo señales que un BMS real proporcionaría** (voltaje, corriente, temperatura y tiempo durante la descarga): nunca datos exclusivos de laboratorio como la espectroscopía de impedancia (EIS) o la curva completa capacidad-voltaje.
 
 ## Puesta en marcha rápida
 
@@ -24,9 +24,12 @@ pip install -r requirements.txt
 
 # Ejecuta el pipeline completo (por defecto usa el dataset real, ver abajo):
 python -m src.train
+
+# Análisis exploratorio: gráficas + tabla resumen en results/
+python -m src.eda
 ```
 
-Esto entrena varios modelos sobre los ciclos de descarga del dataset, imprime sus métricas por consola y guarda resultados en `results/`.
+`train.py` entrena varios modelos sobre los ciclos de descarga del dataset, imprime sus métricas por consola y guarda resultados en `results/` (métricas en `metrics.json`, gráficas predicción-vs-real en `results/figures/`). `eda.py` no entrena nada: genera `results/eda_summary.csv` y las gráficas de `results/figures/eda/` (caída de capacidad por grupo experimental, SOH por batería, correlación de features) para entender el dataset antes de afinar el modelo.
 
 ```bash
 # Lanza los tests:
@@ -43,6 +46,8 @@ El dataset ya está integrado y es la fuente por defecto (`data.source: nasa` en
 
 Son 34 baterías repartidas en 9 grupos experimentales; `configs/config.yaml` reserva una batería de cada grupo para test (`data.test_batteries`), así el conjunto de test cubre condiciones distintas a las de entrenamiento.
 
+El dataset real trae algunas lecturas inválidas (herencia del `.mat` original de la NASA): capacidad vacía en algún ciclo de descarga, y algún ciclo suelto con capacidad ~0 Ah por fallo puntual del sensor. `nasa_loader.py` descarta esas filas en vez de romper el pipeline; son una fracción pequeña del total (~1%).
+
 Para probar el pipeline sin el dataset descargado (p. ej. para depurar rápido), se puede cambiar `data.source` a `synthetic` en `configs/config.yaml`: `src/data/synthetic.py` genera baterías simuladas con una curva de degradación realista, en el mismo formato interno.
 
 ## Formato interno de datos
@@ -54,7 +59,7 @@ Cada fila del DataFrame que produce `DataLoader.load_cycles()` es un ciclo de de
 | `battery_id` | identificador de la celda (str) |
 | `cycle` | número de ciclo de descarga, empezando en 0 (int) |
 | `capacity` | capacidad medida en ese ciclo, en Ah |
-| `soh` | capacidad relativa respecto al primer ciclo registrado de esa batería, en % |
+| `soh` | capacidad relativa respecto a la capacidad MÁXIMA observada en esa batería, en % (no la del primer ciclo: en varios grupos NASA la primera lectura es ella misma anómala, ver `nasa_loader.py`) |
 | `rul` | ciclos restantes hasta cruzar el umbral de fin de vida (lo añade `DataLoader.add_rul_labels`) |
 | `charge_time` | duración de la carga previa más cercana, en segundos |
 | `time_arr`, `voltage_arr`, `current_arr`, `temp_arr` | series temporales de la descarga (tiempo, voltaje, corriente, temperatura) — señales tipo BMS |
@@ -79,7 +84,7 @@ battery_rul_tfg/
 │   │   └── cleaned_dataset/ # metadata.csv + data/*.csv (NASA, desde Kaggle)
 │   └── processed/           # datos intermedios cacheados
 ├── notebooks/
-│   └── 01_eda.ipynb         # análisis exploratorio de partida
+│   └── 01_eda.ipynb         # exploración interactiva adicional (opcional)
 ├── src/
 │   ├── data/
 │   │   ├── synthetic.py     # generador de datos sintéticos (placeholder)
@@ -91,6 +96,7 @@ battery_rul_tfg/
 │   │   ├── classical_models.py  # RandomForest, XGBoost
 │   │   └── deep_models.py       # LSTM (PyTorch)
 │   ├── train.py             # entrena y compara todos los modelos
+│   ├── eda.py                # análisis exploratorio: gráficas + tabla resumen (no entrena)
 │   ├── evaluate.py          # métricas y gráficas
 │   └── utils.py             # semillas, logging
 ├── tests/
@@ -111,9 +117,13 @@ Todos implementan la misma interfaz (`fit`, `predict`, `evaluate`) definida en `
 
 RMSE, MAE, MAPE y R², calculadas en `src/evaluate.py` sobre un conjunto de test dividido **por batería completa** (nunca por ciclo suelto), para evitar fuga de datos entre train y test.
 
+Primer resultado con el dataset real (18 sept 2026): RMSE ≈ 12-15 puntos de SOH, R² todavía negativo en los cuatro modelos — punto de partida honesto con solo 5 features tipo BMS, antes de afinar hiperparámetros y features (ver `python -m src.eda` para investigar por qué).
+
 ## Próximos pasos sugeridos
 
-- Construir el dashboard de monitorización (Streamlit) que simula la conexión con el vehículo y muestra el SOH estimado en tiempo real, sobre los modelos ya entrenados.
+- Primer EDA con datos reales (`python -m src.eda`) para entender el dataset y mejorar el R² inicial.
+- Ajustar hiperparámetros, validación cruzada y comparación seria entre modelos.
 - Ampliar `features.py` con más indicadores de salud calculables desde señales tipo BMS (p. ej. pendiente de descarga por tramos, tiempo hasta un umbral de voltaje).
+- **Construir el dashboard de monitorización (Streamlit)** que simula la conexión con el vehículo y muestra el SOH estimado en tiempo real, sobre el mejor modelo ya entrenado — es el entregable final acordado con el tutor, pendiente de empezar.
 - Añadir interpretabilidad (SHAP) sobre el mejor modelo ensemble.
 - Documentar en la memoria (plantilla oficial, LaTeX) el formato interno, la decisión de restringir las features a señales tipo BMS, y los resultados por modelo.

@@ -31,7 +31,7 @@ def test_generate_dataset_shape_and_monotonic_soh():
     df = generate_dataset(n_batteries=3, n_cycles=50, seed=0)
     assert set(df.columns) >= {
         "battery_id", "cycle", "capacity", "soh", "charge_time",
-        "time_arr", "voltage_arr", "current_arr", "temp_arr",
+        "time_arr", "voltage_arr", "current_arr", "temp_arr", "ambient_temp",
     }
     assert df.battery_id.nunique() == 3
     for _, group in df.groupby("battery_id"):

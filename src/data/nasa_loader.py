@@ -111,6 +111,7 @@ def load_nasa_dataset(raw_dir: str = "data/raw/cleaned_dataset") -> pd.DataFrame
                 "battery_id": battery_id,
                 "cycle": cycle_idx,
                 "capacity": capacity,
+                "ambient_temp": float(row["ambient_temperature"]),
                 # SOH normalizado respecto a la capacidad MÁXIMA observada
                 # en esta batería (ver nota más arriba): cada grupo de
                 # baterías NASA tiene una capacidad nominal ligeramente
