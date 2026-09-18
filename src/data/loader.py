@@ -3,8 +3,7 @@
 DataLoader es el único punto del pipeline que conoce de dónde vienen los
 datos. El resto del código (features, modelos, evaluación) solo trabaja
 con el DataFrame en el "formato interno" descrito en el README, así que
-para conectar un dataset real (NASA/CALCE) basta con añadir un método de
-carga nuevo aquí (o una clase hermana) que devuelva ese mismo formato.
+conectar un dataset nuevo es tan sencillo como añadir un loader más aquí.
 """
 from pathlib import Path
 
@@ -20,8 +19,8 @@ class DataLoader:
 
     def load_cycles(self) -> pd.DataFrame:
         """Devuelve un DataFrame con una fila por ciclo (ver formato interno
-        en el README). Actualmente solo implementa la fuente "synthetic";
-        añade aquí un `elif` para tu loader real cuando lo tengas."""
+        en el README). Fuentes disponibles: "synthetic" (placeholder) y
+        "nasa" (dataset real NASA Battery Dataset)."""
         source = self.data_cfg.get("source", "synthetic")
         if source == "synthetic":
             df = generate_dataset(
@@ -29,10 +28,13 @@ class DataLoader:
                 n_cycles=self.data_cfg.get("n_cycles", 300),
                 seed=self.config.get("seed", 42),
             )
+        elif source == "nasa":
+            from src.data.nasa_loader import load_nasa_dataset
+            df = load_nasa_dataset(raw_dir=self.data_cfg.get("raw_dir", "data/raw/cleaned_dataset"))
         else:
             raise NotImplementedError(
                 f"Fuente de datos '{source}' no implementada todavía. "
-                "Añade tu loader real (p. ej. para NASA/CALCE) en src/data/ "
+                "Añade tu loader real (p. ej. para CALCE/Oxford) en src/data/ "
                 "y regístralo aquí."
             )
         return self.add_rul_labels(df)
@@ -65,10 +67,11 @@ class DataLoader:
         return train, test
 
     def cache_processed(self, df: pd.DataFrame, name: str = "cycles.csv") -> Path:
-        """Guarda una versión sin las curvas (v_curve/q_curve, no tabulares)
-        en data/processed/, útil para inspección rápida en un notebook."""
+        """Guarda una versión sin las señales temporales (no tabulares) en
+        data/processed/, útil para inspección rápida en un notebook."""
         out_dir = Path("data/processed")
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / name
-        df.drop(columns=["v_curve", "q_curve"], errors="ignore").to_csv(out_path, index=False)
+        cols_to_drop = ["time_arr", "voltage_arr", "current_arr", "temp_arr"]
+        df.drop(columns=cols_to_drop, errors="ignore").to_csv(out_path, index=False)
         return out_path

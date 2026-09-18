@@ -3,15 +3,20 @@
 seed: 42
 
 data:
-  # "synthetic" usa el generador de datos de placeholder (src/data/synthetic.py).
-  # Cambia a otro valor (p. ej. "nasa") cuando tengas un loader real en src/data/.
-  source: synthetic
+  # "nasa" usa el dataset real (src/data/nasa_loader.py), ya descargado en
+  # data/raw/cleaned_dataset/. Cambia a "synthetic" para comprobar el
+  # pipeline rápido sin depender del dataset real (src/data/synthetic.py).
+  source: nasa
+  raw_dir: data/raw/cleaned_dataset
+  # Parámetros del generador sintético (solo se usan si source: synthetic).
   n_batteries: 24
   n_cycles: 300
-  eol_threshold: 0.80        # umbral de fin de vida (80% de capacidad nominal)
-  # Baterías reservadas para test (por id). Con datos sintéticos se generan
-  # ids battery_00 .. battery_23; aquí reservamos un 25% aprox.
-  test_batteries: ["battery_18", "battery_19", "battery_20", "battery_21", "battery_22", "battery_23"]
+  eol_threshold: 0.80        # umbral de fin de vida (80% de la capacidad del primer ciclo)
+  # Baterías reservadas para test (por id). Una por cada grupo experimental
+  # del dataset NASA (05-06-07-18, 25-28, 29-32, 33-34-36, 38-40, 41-44,
+  # 45-48, 49-52, 53-56), para que el test cubra condiciones distintas
+  # (~25% de las 34 baterías disponibles).
+  test_batteries: ["B0018", "B0028", "B0032", "B0036", "B0040", "B0044", "B0048", "B0052", "B0056"]
 
 target: soh                   # "soh" o "rul"
 

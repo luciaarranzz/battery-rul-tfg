@@ -1,20 +1,24 @@
 """Generador de datos sintéticos de degradación de baterías.
 
 Es un PLACEHOLDER: sirve para tener el pipeline completo funcionando de
-principio a fin sin depender de descargar el dataset real. Simula, para cada
-batería, una curva de degradación de capacidad con forma realista
-(decaimiento exponencial + lineal + ruido) y, para cada ciclo, una curva
-Q(V) sintética de la que se pueden extraer indicadores de salud (health
-indicators) del mismo tipo que se usarían con datos reales (p. ej. NASA).
+principio a fin sin depender de descargar el dataset real, y también como
+comprobación rápida del pipeline sin esperar a leer cientos de CSV reales.
+Simula, para cada batería, una curva de degradación de capacidad con forma
+realista (decaimiento exponencial + lineal + ruido) y, para cada ciclo de
+descarga, una señal temporal de voltaje/corriente/temperatura del mismo
+tipo que produciría un BMS real -- el mismo formato que genera el loader
+del dataset real (src/data/nasa_loader.py), para que features.py funcione
+exactamente igual con ambas fuentes.
 
-Sustituir por un loader real es el primer paso natural del TFG una vez
-elegido el dataset definitivo (ver README.md).
+El dataset real ya está integrado (ver src/data/nasa_loader.py); este
+generador se mantiene como modo rápido de comprobación del pipeline.
 """
 import numpy as np
 import pandas as pd
 
 NOMINAL_CAPACITY_AH = 2.0
-V_GRID = np.linspace(3.0, 4.2, 50)
+N_SAMPLES = 60             # muestras por ciclo de descarga simulado
+DISCHARGE_SECONDS = 3000   # duración típica de una descarga completa (~50 min)
 
 
 def _soh_curve(n_cycles: int, rng: np.random.Generator) -> np.ndarray:
@@ -33,42 +37,44 @@ def _soh_curve(n_cycles: int, rng: np.random.Generator) -> np.ndarray:
     return soh
 
 
-def _q_curve_for_cycle(soh: float, rng: np.random.Generator) -> np.ndarray:
-    """Curva Q(V) sintética para un ciclo dado su SOH: una sigmoide escalada
-    por la capacidad disponible, con un ligero desplazamiento de la meseta
-    de voltaje a medida que la celda degrada (efecto observado en literatura)."""
-    v_mid = 3.7 - 0.05 * (1 - soh)   # el punto medio se desplaza al degradar
-    spread = 0.12
-    shape = 1 / (1 + np.exp(-(V_GRID - v_mid) / spread))
-    noise = rng.normal(0, 0.005, size=V_GRID.shape)
-    return NOMINAL_CAPACITY_AH * soh * shape + noise
+def _discharge_signal(soh: float, rng: np.random.Generator, base_temp: float):
+    """Señal simulada de un ciclo de descarga (voltaje, corriente y
+    temperatura frente al tiempo), con forma parecida a una descarga real:
+    el voltaje cae de ~4.2V a ~2.7V, la corriente es aprox. constante, y
+    la temperatura sube algo más cuanto peor está la batería."""
+    duration = DISCHARGE_SECONDS * (0.55 + 0.45 * soh)  # peor SOH -> descargas más cortas
+    time_arr = np.linspace(0, duration, N_SAMPLES)
+    v_start, v_end = 4.2, 2.7 + 0.3 * (1 - soh)
+    shape = (time_arr / duration) ** (0.7 + 0.6 * (1 - soh))
+    voltage_arr = v_start + (v_end - v_start) * shape + rng.normal(0, 0.01, size=N_SAMPLES)
+    current_arr = -2.0 + rng.normal(0, 0.03, size=N_SAMPLES)
+    temp_arr = base_temp + 6 * (1 - soh) * (time_arr / duration) + rng.normal(0, 0.3, size=N_SAMPLES)
+    return time_arr, voltage_arr, current_arr, temp_arr
 
 
 def generate_dataset(n_batteries: int = 24, n_cycles: int = 300, seed: int = 42) -> pd.DataFrame:
-    """Devuelve un DataFrame con una fila por ciclo, en el formato interno
-    descrito en el README (battery_id, cycle, capacity, soh, charge_time,
-    t_mean, t_max, v_curve, q_curve)."""
+    """Devuelve un DataFrame con una fila por ciclo de descarga, en el
+    formato interno descrito en el README (battery_id, cycle, capacity,
+    soh, charge_time, time_arr, voltage_arr, current_arr, temp_arr)."""
     rng = np.random.default_rng(seed)
     rows = []
     for i in range(n_batteries):
         battery_id = f"battery_{i:02d}"
         soh_curve = _soh_curve(n_cycles, rng)
-        base_charge_time = rng.uniform(45, 65)  # minutos
+        base_charge_time = rng.uniform(2700, 3900)  # segundos
         base_temp = rng.uniform(24, 32)
         for cycle, soh in enumerate(soh_curve):
-            q_curve = _q_curve_for_cycle(soh, rng)
-            charge_time = base_charge_time * (2 - soh) + rng.normal(0, 1.5)
-            t_mean = base_temp + 3 * (1 - soh) + rng.normal(0, 0.5)
-            t_max = t_mean + rng.uniform(2, 5)
+            time_arr, voltage_arr, current_arr, temp_arr = _discharge_signal(soh, rng, base_temp)
+            charge_time = base_charge_time * (2 - soh) + rng.normal(0, 90)
             rows.append({
                 "battery_id": battery_id,
                 "cycle": cycle,
                 "capacity": NOMINAL_CAPACITY_AH * soh,
                 "soh": soh * 100,
                 "charge_time": charge_time,
-                "t_mean": t_mean,
-                "t_max": t_max,
-                "v_curve": V_GRID,
-                "q_curve": q_curve,
+                "time_arr": time_arr,
+                "voltage_arr": voltage_arr,
+                "current_arr": current_arr,
+                "temp_arr": temp_arr,
             })
     return pd.DataFrame(rows)

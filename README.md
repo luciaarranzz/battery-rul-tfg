@@ -13,6 +13,8 @@ Un pipeline de Machine Learning en Python para dos problemas relacionados:
 
 El repositorio está organizado como un pipeline modular (carga de datos → features → modelos → evaluación), pensado para poder explicarse capítulo a capítulo en la memoria del TFG.
 
+La dirección final acordada con el tutor (César) es un **dashboard de monitorización** que simula la conexión con un vehículo eléctrico y estima el SOH a partir de datos tipo BMS (Battery Management System) — no una app de "sube un CSV y te doy una predicción". Por eso todo el pipeline, desde la carga de datos hasta las features, usa **solo señales que un BMS real proporcionaría** (voltaje, corriente, temperatura y tiempo durante la descarga): nunca datos exclusivos de laboratorio como la espectroscopía de impedancia (EIS) o la curva completa capacidad-voltaje.
+
 ## Puesta en marcha rápida
 
 ```bash
@@ -20,42 +22,51 @@ python -m venv .venv
 source .venv/bin/activate          # en Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# Ejecuta el pipeline completo sobre datos sintéticos (no hace falta descargar nada):
+# Ejecuta el pipeline completo (por defecto usa el dataset real, ver abajo):
 python -m src.train
 ```
 
-Esto genera un dataset sintético de baterías (ver más abajo por qué), entrena varios modelos, imprime sus métricas por consola y guarda resultados en `results/`.
+Esto entrena varios modelos sobre los ciclos de descarga del dataset, imprime sus métricas por consola y guarda resultados en `results/`.
 
 ```bash
 # Lanza los tests:
 pytest -q
 ```
 
-## Por qué hay un generador de datos sintéticos
+### Dataset real (NASA Battery Dataset)
 
-Para poder tener el pipeline funcionando de principio a fin desde el primer día —sin depender de descargar y adaptar el dataset real—, `src/data/synthetic.py` genera un conjunto de baterías simuladas con una curva de degradación de capacidad realista (decaimiento tipo exponencial + ruido) y una curva Q(V) sintética por ciclo.
+El dataset ya está integrado y es la fuente por defecto (`data.source: nasa` en `configs/config.yaml`).
 
-**Esto es un placeholder, no el resultado final del TFG.** El siguiente paso natural es sustituirlo por el dataset real elegido (ver `docs/` o la propuesta en Word entregada aparte, sección 4): normalmente el **NASA Battery Dataset** como punto de partida. Para ello solo hay que:
+1. Descargar la versión "cleaned" del NASA Battery Dataset desde Kaggle (`patrickfleith/nasa-battery-dataset`).
+2. Descomprimirlo dentro de `data/raw/`, de forma que quede `data/raw/cleaned_dataset/metadata.csv` y `data/raw/cleaned_dataset/data/*.csv`.
+3. Listo: `src/data/nasa_loader.py` traduce ese formato al formato interno del pipeline (ver más abajo).
 
-1. Descargar el dataset (p. ej. desde Kaggle: `patrickfleith/nasa-battery-dataset`) en `data/raw/`.
-2. Escribir un loader específico en `src/data/loader.py` (o uno nuevo, p. ej. `nasa_loader.py`) que traduzca el formato real del dataset al mismo formato interno que ya usa `synthetic.py` (ver la sección "Formato interno de datos" más abajo).
-3. Cambiar en `configs/config.yaml` el `data_source` de `synthetic` a `nasa` (o el nombre que le des).
+Son 34 baterías repartidas en 9 grupos experimentales; `configs/config.yaml` reserva una batería de cada grupo para test (`data.test_batteries`), así el conjunto de test cubre condiciones distintas a las de entrenamiento.
 
-El resto del pipeline (features, modelos, evaluación) no necesita tocarse: solo depende del formato interno, no de dónde vienen los datos.
+Para probar el pipeline sin el dataset descargado (p. ej. para depurar rápido), se puede cambiar `data.source` a `synthetic` en `configs/config.yaml`: `src/data/synthetic.py` genera baterías simuladas con una curva de degradación realista, en el mismo formato interno.
 
 ## Formato interno de datos
 
-Cada ciclo se representa como un diccionario/fila con:
+Cada fila del DataFrame que produce `DataLoader.load_cycles()` es un ciclo de descarga:
 
 | Campo | Descripción |
 |---|---|
 | `battery_id` | identificador de la celda (str) |
-| `cycle` | número de ciclo (int) |
+| `cycle` | número de ciclo de descarga, empezando en 0 (int) |
 | `capacity` | capacidad medida en ese ciclo, en Ah |
-| `soh` | capacidad relativa respecto a la nominal, en % |
-| `charge_time` | duración de la fase de carga, en minutos |
-| `t_mean`, `t_max` | temperatura media/máxima durante el ciclo, en °C |
-| `v_curve`, `q_curve` | arrays de voltaje y capacidad acumulada del ciclo (para health indicators tipo ΔQ(V)) |
+| `soh` | capacidad relativa respecto al primer ciclo registrado de esa batería, en % |
+| `rul` | ciclos restantes hasta cruzar el umbral de fin de vida (lo añade `DataLoader.add_rul_labels`) |
+| `charge_time` | duración de la carga previa más cercana, en segundos |
+| `time_arr`, `voltage_arr`, `current_arr`, `temp_arr` | series temporales de la descarga (tiempo, voltaje, corriente, temperatura) — señales tipo BMS |
+
+`src/features.py` calcula, a partir de esas series, los indicadores de salud (Health Indicators) que realmente entrenan los modelos:
+
+| Feature | Descripción |
+|---|---|
+| `discharge_duration` | duración total de la descarga (s) |
+| `charge_time` | duración de la carga previa (s) |
+| `t_mean`, `t_max` | temperatura media/máxima durante la descarga (°C) |
+| `voltage_drop_rate` | velocidad media de caída de voltaje durante la descarga (V/s) |
 
 ## Estructura del proyecto
 
@@ -65,14 +76,16 @@ battery_rul_tfg/
 │   └── config.yaml          # rutas, hiperparámetros, semillas
 ├── data/
 │   ├── raw/                 # dataset original (NASA/CALCE), sin tocar
+│   │   └── cleaned_dataset/ # metadata.csv + data/*.csv (NASA, desde Kaggle)
 │   └── processed/           # datos intermedios cacheados
 ├── notebooks/
 │   └── 01_eda.ipynb         # análisis exploratorio de partida
 ├── src/
 │   ├── data/
 │   │   ├── synthetic.py     # generador de datos sintéticos (placeholder)
-│   │   └── loader.py        # DataLoader: carga y split por batería
-│   ├── features.py          # extracción de indicadores de salud (HI)
+│   │   ├── nasa_loader.py   # loader del dataset real NASA Battery Dataset
+│   │   └── loader.py        # DataLoader: elige fuente, split por batería, RUL
+│   ├── features.py          # extracción de indicadores de salud (HI), solo señales tipo BMS
 │   ├── models/
 │   │   ├── base_model.py    # interfaz común (patrón Strategy)
 │   │   ├── classical_models.py  # RandomForest, XGBoost
@@ -100,7 +113,7 @@ RMSE, MAE, MAPE y R², calculadas en `src/evaluate.py` sobre un conjunto de test
 
 ## Próximos pasos sugeridos
 
-- Sustituir `synthetic.py` por un loader del dataset real (NASA/CALCE).
-- Ampliar `features.py` con más indicadores de salud (curvas de capacidad incremental, resistencia interna).
+- Construir el dashboard de monitorización (Streamlit) que simula la conexión con el vehículo y muestra el SOH estimado en tiempo real, sobre los modelos ya entrenados.
+- Ampliar `features.py` con más indicadores de salud calculables desde señales tipo BMS (p. ej. pendiente de descarga por tramos, tiempo hasta un umbral de voltaje).
 - Añadir interpretabilidad (SHAP) sobre el mejor modelo ensemble.
-- Documentar resultados y decisiones en la memoria del TFG.
+- Documentar en la memoria (plantilla oficial, LaTeX) el formato interno, la decisión de restringir las features a señales tipo BMS, y los resultados por modelo.

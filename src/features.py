@@ -1,61 +1,64 @@
 """Extracción de indicadores de salud (Health Indicators, HI) por ciclo.
 
-Estas funciones operan sobre el formato interno de datos (ver README), así
-que funcionan igual con los datos sintéticos que con un dataset real, en
-cuanto este último tenga un loader que produzca ese mismo formato.
+Importante (indicación de César, sept. 2026): los indicadores se calculan
+SOLO a partir de señales que un BMS real proporcionaría durante la
+descarga -- voltaje, corriente, temperatura y tiempo -- nunca a partir de
+datos de laboratorio como la espectroscopía de impedancia (EIS) o la
+curva completa capacidad-voltaje. Esto hace que el mismo código funcione
+igual con los datos sintéticos (placeholder) que con el dataset real NASA,
+en cuanto el loader correspondiente produzca el mismo formato interno
+(ver README, sección "Formato interno de datos").
 """
 import numpy as np
 import pandas as pd
 
-FEATURE_COLUMNS = ["delta_q_var", "charge_time", "t_mean", "t_max", "discharge_slope"]
+FEATURE_COLUMNS = ["discharge_duration", "charge_time", "t_mean", "t_max", "voltage_drop_rate"]
 
 
-def delta_q_variance(q_curve_ref: np.ndarray, q_curve_cur: np.ndarray) -> float:
-    """Varianza de ΔQ(V) entre un ciclo de referencia (p. ej. el ciclo 10)
-    y el ciclo actual (Severson et al., 2019): el indicador individual más
-    predictivo de la vida útil restante encontrado en la literatura."""
-    delta_q = np.asarray(q_curve_cur) - np.asarray(q_curve_ref)
-    return float(np.var(delta_q))
+def discharge_duration(time_arr) -> float:
+    """Duración total del ciclo de descarga, en segundos."""
+    time_arr = np.asarray(time_arr, dtype=float)
+    if len(time_arr) < 2:
+        return 0.0
+    return float(time_arr[-1] - time_arr[0])
 
 
-def discharge_slope(v_curve: np.ndarray, q_curve: np.ndarray) -> float:
-    """Pendiente de la curva Q(V): resume qué tan "empinada" es la curva de
-    capacidad frente a voltaje en ese ciclo."""
-    return float(np.polyfit(v_curve, q_curve, 1)[0])
+def voltage_drop_rate(voltage_arr, time_arr) -> float:
+    """Velocidad media de caída de voltaje durante la descarga (V/s):
+    cuanto más rápido cae el voltaje, peor suele estar la batería."""
+    duration = discharge_duration(time_arr)
+    if duration <= 0:
+        return 0.0
+    voltage_arr = np.asarray(voltage_arr, dtype=float)
+    return float((voltage_arr[0] - voltage_arr[-1]) / duration)
 
 
-def extract_health_indicators(cycle_row: pd.Series, ref_q_curve: np.ndarray) -> dict:
-    """Calcula los indicadores de salud de un ciclo, dado el ciclo de
-    referencia (normalmente uno de los primeros ciclos de esa batería)."""
+def extract_health_indicators(cycle_row: pd.Series) -> dict:
+    """Calcula los indicadores de salud de un ciclo de descarga a partir
+    de sus señales tipo BMS (time_arr, voltage_arr, temp_arr) y de la
+    duración de la carga previa (charge_time, ya calculada por el loader
+    correspondiente: synthetic.py o nasa_loader.py)."""
+    temp_arr = np.asarray(cycle_row["temp_arr"], dtype=float)
     return {
-        "delta_q_var": delta_q_variance(ref_q_curve, cycle_row["q_curve"]),
-        "charge_time": cycle_row["charge_time"],
-        "t_mean": cycle_row["t_mean"],
-        "t_max": cycle_row["t_max"],
-        "discharge_slope": discharge_slope(cycle_row["v_curve"], cycle_row["q_curve"]),
+        "discharge_duration": discharge_duration(cycle_row["time_arr"]),
+        "charge_time": float(cycle_row["charge_time"]),
+        "t_mean": float(np.mean(temp_arr)) if len(temp_arr) else 0.0,
+        "t_max": float(np.max(temp_arr)) if len(temp_arr) else 0.0,
+        "voltage_drop_rate": voltage_drop_rate(cycle_row["voltage_arr"], cycle_row["time_arr"]),
     }
 
 
-def build_feature_matrix(df: pd.DataFrame, target: str = "soh", ref_cycle: int = 5):
+def build_feature_matrix(df: pd.DataFrame, target: str = "soh"):
     """Construye la matriz X (features) y el vector y (SOH o RUL) a partir
-    del DataFrame de ciclos. El ciclo de referencia para ΔQ(V) es, por
-    batería, el ciclo `ref_cycle` (o el primero disponible si hay menos)."""
+    del DataFrame de ciclos, en el formato interno (ver README)."""
     if target not in {"soh", "rul"}:
         raise ValueError("target debe ser 'soh' o 'rul'")
 
-    rows = []
-    targets = []
-    groups = []
-    for battery_id, group in df.groupby("battery_id"):
-        group = group.sort_values("cycle").reset_index(drop=True)
-        ref_idx = min(ref_cycle, len(group) - 1)
-        ref_q_curve = group.loc[ref_idx, "q_curve"]
-        for _, cycle_row in group.iterrows():
-            rows.append(extract_health_indicators(cycle_row, ref_q_curve))
-            targets.append(cycle_row[target])
-            groups.append(battery_id)
+    rows = [extract_health_indicators(cycle_row) for _, cycle_row in df.iterrows()]
 
     X = pd.DataFrame(rows, columns=FEATURE_COLUMNS)
-    y = pd.Series(targets, name=target)
-    groups = pd.Series(groups, name="battery_id")
+    y = df[target].reset_index(drop=True)
+    y.name = target
+    groups = df["battery_id"].reset_index(drop=True)
+    groups.name = "battery_id"
     return X, y, groups
