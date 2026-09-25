@@ -26,7 +26,7 @@ models:
     max_depth: 12
   xgboost:
     n_estimators: 300
-    max_depth: 6
+    max_depth: 4
     learning_rate: 0.05
   lstm:
     hidden_size: 32
