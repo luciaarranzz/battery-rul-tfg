@@ -17,6 +17,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+NOMINAL_CAPACITY_AH = 2.0  # capacidad nominal de las celdas NASA (los README usan 1.6 Ah = 20% de caída)
+
+
 
 def _read_cycle_csv(raw_dir: Path, filename: str) -> pd.DataFrame:
     return pd.read_csv(raw_dir / "data" / filename)
@@ -73,15 +76,10 @@ def load_nasa_dataset(raw_dir: str = "data/raw/cleaned_dataset") -> pd.DataFrame
                     cdf["Time"].iloc[-1] - cdf["Time"].iloc[0]
                 )
 
-        # Referencia para el SOH: la capacidad MÁXIMA observada en esta
-        # batería (ya limpia de lecturas inválidas), no la del primer
-        # ciclo registrado. Se probó con la del primer ciclo y en varios
-        # grupos de baterías NASA (p. ej. B0033, B0039, B0041) esa primera
-        # lectura es ella misma anómala -- mucho más baja que el resto --
-        # así que normalizar contra ella disparaba el SOH por encima del
-        # 1000%. Usar el máximo observado es además la definición habitual
-        # de SOH (capacidad relativa a la capacidad de pico de esa celda).
-        reference_capacity = float(discharge["Capacity"].max())
+        # Referencia para el SOH: la capacidad nominal de las celdas (2.0 Ah),
+        # como indicó el tutor, igual para todas las baterías.
+
+        reference_capacity = NOMINAL_CAPACITY_AH
         battery_rows = []
         cycle_idx = 0
 
