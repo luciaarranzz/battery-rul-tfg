@@ -4,6 +4,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
+from cars import CARS, car_html
+
 
 CSV_PATH = Path(__file__).resolve().parents[1] / "results" / "predictions.csv"
 
@@ -40,8 +43,27 @@ if filtrado.empty:
     st.stop()
 
 col1, col2, col3 = st.columns(3)
-col1.metric("Filas", len(filtrado))
-col2.metric("RMSE (puntos de SOH)", f"{np.sqrt((filtrado['error'] ** 2).mean()):.2f}")
-col3.metric("Error absoluto medio", f"{filtrado['error_abs'].mean():.2f}")
+col1.metric("Filas", len(filtrado), border=True)
+col2.metric("RMSE (puntos de SOH)", f"{np.sqrt((filtrado['error'] ** 2).mean()):.2f}", border=True)
+col3.metric("Error absoluto medio", f"{filtrado['error_abs'].mean():.2f}", border=True)
+
+
+st.subheader("SOH real frente a predicho")
+bateria_sel = st.selectbox("Batería a mostrar", sorted(filtrado["bateria"].unique()))
+una = filtrado[filtrado["bateria"] == bateria_sel].set_index("ciclo")
+rmse_una = np.sqrt((una["error"] ** 2).mean())
+st.caption(f"{bateria_sel} · {una['origen'].iloc[0]} · RMSE {rmse_una:.2f} puntos de SOH")
+tipo = st.selectbox("Tipo de vehículo (ilustrativo)", list(CARS))
+tema = st.context.theme.type or "light"
+components.html(car_html(tipo, tema), height=190)
+
+soh_final = una["soh_predicho"].iloc[-1]
+estado = "Fin de vida" if soh_final < 80 else "Aviso" if soh_final < 90 else "OK"
+autonomia = CARS[tipo]["range_km"] * soh_final / 100
+c1, c2, c3 = st.columns(3)
+c1.metric("SOH predicho (último ciclo)", f"{soh_final:.0f} %", border=True)
+c2.metric("Estado", estado, border=True)
+c3.metric("Autonomía ilustrativa", f"{autonomia:.0f} km", border=True)
+st.line_chart(una[["soh_real", "soh_predicho"]])
 
 st.dataframe(filtrado, width="stretch", hide_index=True)
