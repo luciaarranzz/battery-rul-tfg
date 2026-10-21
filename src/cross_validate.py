@@ -18,6 +18,7 @@ from sklearn.model_selection import GroupKFold
 from src.data.loader import DataLoader
 from src.features import build_feature_matrix
 from src.models.classical_models import LinearBaselineModel, RandomForestModel, XGBoostModel
+from src.models.deep_models import LSTMModel, align_targets
 from src.utils import get_logger, set_seed
 
 log = get_logger(__name__)
@@ -59,6 +60,28 @@ def cross_validate(train_df: pd.DataFrame, cfg: dict, target: str = "soh", n_spl
 
     return fold_metrics
 
+def cross_validate_lstm(train_df: pd.DataFrame, cfg: dict, target: str = "soh", n_splits: int = 5) -> list:
+    """Igual que cross_validate, pero solo para la LSTM: necesita `groups`
+    y sus predicciones empiezan en el ciclo `sequence_length` de cada batería,
+    así que el valor real se recorta con align_targets."""
+    X, y, groups = build_feature_matrix(train_df, target=target)
+    gkf = GroupKFold(n_splits=n_splits)
+    folds = []
+
+    for fold_idx, (train_idx, val_idx) in enumerate(gkf.split(X, y, groups=groups)):
+        X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
+        y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
+        g_train, g_val = groups.iloc[train_idx], groups.iloc[val_idx]
+
+        model = LSTMModel(**cfg["models"]["lstm"])
+        model.fit(X_train, y_train, groups=g_train)
+        y_pred = model.predict(X_val, groups=g_val)
+        y_true = align_targets(y_val, g_val, model.sequence_length)
+        metrics = model.evaluate(y_true, y_pred)
+        folds.append(metrics)
+        log.info("fold %d - lstm -> %s", fold_idx, {k: round(v, 3) for k, v in metrics.items()})
+
+    return folds
 
 def summarize(fold_metrics: dict) -> pd.DataFrame:
     """Convierte {modelo: [metrics_fold_0, ...]} en una tabla con la media
@@ -86,6 +109,7 @@ def main(config_path: str = "configs/config.yaml"):
     log.info("Baterías en train (para CV): %d", train_df.battery_id.nunique())
 
     fold_metrics = cross_validate(train_df, cfg, target=target, n_splits=5)
+    fold_metrics["lstm"] = cross_validate_lstm(train_df, cfg, target=target, n_splits=5)
     summary = summarize(fold_metrics)
     log.info("Resumen validación cruzada (media ± std por modelo):\n%s", summary.round(3))
     return summary

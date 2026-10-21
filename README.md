@@ -103,7 +103,7 @@ battery_rul_tfg/
 │   └── test_features.py     # tests de las funciones de features
 ├── results/                  # métricas, gráficas y modelos entrenados
 └── requirements.txt
-```
+
 
 ## Modelos incluidos
 

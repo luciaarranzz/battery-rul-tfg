@@ -34,6 +34,7 @@ models:
     sequence_length: 10
     epochs: 80
     lr: 0.005
+    batch_size: 64
 
 output:
   results_dir: results
