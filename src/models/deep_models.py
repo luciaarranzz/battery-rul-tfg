@@ -72,13 +72,14 @@ class LSTMModel(BaseModel):
     name = "lstm"
 
     def __init__(self, hidden_size: int = 32, n_layers: int = 1, sequence_length: int = 10,
-                 epochs: int = 15, lr: float = 1e-3):
+                 epochs: int = 15, lr: float = 1e-3, batch_size: int = 64):
         _require_torch()
         self.hidden_size = hidden_size
         self.n_layers = n_layers
         self.sequence_length = sequence_length
         self.epochs = epochs
         self.lr = lr
+        self.batch_size = batch_size
         self.net = None
         self._x_mean = None
         self._x_std = None
@@ -109,13 +110,20 @@ class LSTMModel(BaseModel):
 
         X_t = torch.from_numpy(X_seq)
         y_t = torch.from_numpy(y_seq_norm)
+
+        # Entrenamiento por lotes (mini-batches): en cada época se recorren los
+        # datos en trozos de `batch_size` secuencias y se hace un paso del
+        # optimizador por trozo, en lugar de un único paso por época.
+        n = len(X_t)
         self.net.train()
         for _ in range(self.epochs):
-            optimizer.zero_grad()
-            pred = self.net(X_t)
-            loss = loss_fn(pred, y_t)
-            loss.backward()
-            optimizer.step()
+            perm = torch.randperm(n)
+            for start in range(0, n, self.batch_size):
+                idx = perm[start:start + self.batch_size]
+                optimizer.zero_grad()
+                loss = loss_fn(self.net(X_t[idx]), y_t[idx])
+                loss.backward()
+                optimizer.step()
         return self
 
     def predict(self, X_test, groups=None):
@@ -137,4 +145,3 @@ class LSTMModel(BaseModel):
             "Placeholder: implementar cuantificación de incertidumbre "
             "(ver sección 3.6 de la propuesta) como ampliación del TFG."
         )
-    
