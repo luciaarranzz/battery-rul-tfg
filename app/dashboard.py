@@ -1,6 +1,7 @@
 """Dashboard de monitorización del SOH de baterías (versión 1: tabla)."""
 from pathlib import Path
 
+import altair as alt
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -71,6 +72,46 @@ c1, c2, c3 = st.columns(3)
 c1.metric("SOH predicho (último ciclo)", f"{soh_final:.0f} %", border=True)
 c2.metric("Estado", estado, border=True)
 c3.metric("Autonomía ilustrativa", f"{autonomia:.0f} km", border=True)
-st.line_chart(una[["soh_real", "soh_predicho"]])
+
+# Gráfica: SOH real frente a predicho, con el umbral de fin de vida (80 %)
+if tema == "dark":
+    color_real, color_pred, color_umbral = "#ECEAE4", "#FFB020", "#FF5A4E"
+else:
+    color_real, color_pred, color_umbral = "#1B1B1F", "#E8590C", "#D64545"
+
+datos = una.reset_index().melt(
+    id_vars="ciclo",
+    value_vars=["soh_real", "soh_predicho"],
+    var_name="serie",
+    value_name="soh",
+)
+datos["serie"] = datos["serie"].map({"soh_real": "SOH real", "soh_predicho": "SOH predicho"})
+
+lineas = (
+    alt.Chart(datos)
+    .mark_line(strokeWidth=2.5)
+    .encode(
+        x=alt.X("ciclo:Q", title="Ciclo"),
+        y=alt.Y("soh:Q", title="SOH (%)", scale=alt.Scale(zero=False)),
+        color=alt.Color(
+            "serie:N",
+            title=None,
+            scale=alt.Scale(domain=["SOH real", "SOH predicho"], range=[color_real, color_pred]),
+            legend=alt.Legend(orient="top"),
+        ),
+        tooltip=["serie", "ciclo", alt.Tooltip("soh:Q", format=".1f")],
+    )
+)
+umbral = (
+    alt.Chart(pd.DataFrame({"y": [80]}))
+    .mark_rule(strokeDash=[6, 4], color=color_umbral)
+    .encode(y="y:Q")
+)
+etiqueta = (
+    alt.Chart(pd.DataFrame({"y": [80], "texto": ["Fin de vida (80 %)"]}))
+    .mark_text(align="left", dy=-8, color=color_umbral)
+    .encode(y="y:Q", text="texto:N", x=alt.value(6))
+)
+st.altair_chart((lineas + umbral + etiqueta).properties(height=380), width="stretch")
 
 st.dataframe(filtrado, width="stretch", hide_index=True)
