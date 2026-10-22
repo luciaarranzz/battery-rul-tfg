@@ -20,9 +20,16 @@ def load_predictions(path):
 
 df = load_predictions(CSV_PATH)
 
+st.sidebar.header("Algoritmo")
+modelos = sorted(df["modelo"].unique())
+modelo = st.sidebar.selectbox(
+    "Algoritmo de predicción", modelos, index=modelos.index("XGBoost")
+)
+df = df[df["modelo"] == modelo]
+
 st.title("Monitorización del estado de salud (SOH) de baterías")
 st.caption(
-    "Predicciones de XGBoost sobre las 34 baterías NASA. "
+    f"Predicciones de {modelo} sobre las 34 baterías NASA. "
     "'test' son baterías que el modelo no vio al entrenar; "
     "'validación cruzada' son las de entrenamiento, predichas por un modelo que no las vio."
 )
