@@ -1,94 +1,64 @@
-# battery-rul-tfg
+# 🔋 Battery RUL
 
-Estimación del estado de salud (SOH) y de la vida útil restante (RUL) de baterías de ion-litio con Machine Learning, y panel de monitorización.
+![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?logo=scikitlearn&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?logo=pytorch&logoColor=white)
+![XGBoost](https://img.shields.io/badge/XGBoost-337AB7)
+![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)
 
-Trabajo de Fin de Grado · Grado en Ingeniería Informática · Universidad de Burgos
-Autora: Lucía Arranz Martínez · Tutor: César Represa Pérez
+**Battery RUL** estima el **estado de salud (SOH)** y la **vida útil restante (RUL)** de baterías de iones de litio mediante aprendizaje automático, a partir de los datos de envejecimiento del repositorio NASA PCoE. Incluye un **panel de monitorización** en Streamlit donde se compara la predicción de varios algoritmos con el valor real, ciclo a ciclo.
 
-## Qué es
+Trabajo de Fin de Grado del Grado en Ingeniería Informática, Universidad de Burgos.
 
-Un pipeline en Python (carga de datos → características → modelos → evaluación) que estima el SOH de una batería a partir de señales que proporcionaría un BMS real (tensión, corriente, temperatura y tiempo durante la descarga), y un dashboard en Streamlit que muestra las predicciones.
+## 🚀 Despliegue
 
-- **SOH (State of Health):** capacidad actual de la batería, en %, respecto a su capacidad de referencia.
-- **RUL (Remaining Useful Life):** ciclos que le quedan hasta llegar al fin de vida, fijado en un SOH del 80 %.
+### Requisitos previos
 
-Los datos son los del NASA Prognostics Center of Excellence (34 baterías en 9 grupos experimentales).
+1. Git *(para clonar el repositorio)*
+2. Python 3.10 o superior
 
-## Instalación
+### Pasos de instalación
 
-Requisitos: Python 3.14 y Git.
+#### 1. Descargar el código fuente
 
 ```bash
-git clone <url-del-repositorio>
+git clone https://github.com/<usuario>/battery-rul-tfg.git
 cd battery-rul-tfg
+```
+
+#### 2. Crear el entorno virtual e instalar las dependencias
+
+```bash
 python -m venv .venv
-.venv\Scripts\activate             # en Linux/macOS: source .venv/bin/activate
+.venv\Scripts\activate        # Windows
+source .venv/bin/activate     # Linux / macOS
 pip install -r requirements.txt
 ```
 
-### Datos
+#### 3. Obtener los datos y generar las predicciones
 
-1. Descargar la versión «cleaned» del NASA Battery Dataset desde Kaggle (`patrickfleith/nasa-battery-dataset`).
-2. Descomprimirla en `data/raw/` de forma que existan `data/raw/cleaned_dataset/metadata.csv` y `data/raw/cleaned_dataset/data/*.csv`.
+Descarga el dataset [NASA Battery Dataset](https://www.kaggle.com/datasets/patrickfleith/nasa-battery-dataset) y colócalo en la ruta indicada en `configs/config.yaml`. Después, entrena los modelos y genera la tabla de predicciones que lee el panel:
 
-El cargador (`src/data/nasa_loader.py`) traduce ese formato al interno del proyecto y descarta los ciclos con capacidad vacía o prácticamente nula.
-<!-- TODO: describir aquí el filtrado definitivo de ciclos anómalos y la referencia del SOH cuando estén cerrados -->
-
-Las baterías de test se fijan en `configs/config.yaml` (`data.test_batteries`): una por cada grupo experimental.
-
-## Uso
-
-Con el entorno virtual activado, desde la raíz del proyecto:
-
-| Comando | Qué hace |
-|---|---|
-| `python -m src.train` | Entrena los cuatro modelos y evalúa en las baterías de test |
-| `python -m src.cross_validate` | Validación cruzada agrupada por batería (solo con las baterías de entrenamiento) |
-| `python -m src.tune_lstm` | Ajuste de hiperparámetros de la LSTM con validación cruzada |
-| `python -m src.make_predictions_table` | Genera `results/predictions.csv` con las predicciones de los cuatro modelos |
-| `streamlit run app/dashboard.py` | Lanza el dashboard en `http://localhost:8501` |
-| `python -m src.eda` | Análisis exploratorio: gráficas y tabla resumen en `results/` |
-| `pytest -q` | Ejecuta los tests |
-
-## Modelos
-
-Regresión lineal (línea base), Random Forest, XGBoost y LSTM (PyTorch). Todos implementan la misma interfaz (`fit`, `predict`, `evaluate`) definida en `src/models/base_model.py`. Se evalúan con RMSE, MAE, MAPE y R² sobre baterías completas que no intervienen en el entrenamiento, para evitar fugas de datos entre ciclos de una misma batería.
-
-<!-- TODO: añadir aquí la tabla de resultados cuando estén recalculados -->
-
-## Características de entrada
-
-Calculadas en `src/features.py` a partir de las series de cada ciclo de descarga: duración de la descarga, duración de la carga previa, temperatura media y máxima, y velocidad media de caída de tensión.
-<!-- TODO: actualizar esta lista cuando se cierren las variables de entrada -->
-
-## Estructura del proyecto
-
-```text
-battery-rul-tfg/
-├── app/
-│   ├── dashboard.py          # dashboard de Streamlit
-│   └── cars.py               # siluetas de vehículos (ilustrativas)
-├── configs/
-│   └── config.yaml           # rutas, baterías de test, hiperparámetros, semilla
-├── data/
-│   └── raw/                  # dataset original (no se sube al repositorio)
-├── results/                  # métricas, gráficas y predictions.csv
-├── src/
-│   ├── data/                 # carga de datos (loader.py, nasa_loader.py)
-│   ├── models/               # base_model.py, classical_models.py, deep_models.py
-│   ├── features.py           # indicadores de salud a partir de señales tipo BMS
-│   ├── train.py              # entrenamiento y evaluación en test
-│   ├── cross_validate.py     # validación cruzada agrupada por batería
-│   ├── tune_lstm.py          # ajuste de la LSTM
-│   ├── make_predictions_table.py
-│   ├── evaluate.py           # métricas y gráficas
-│   ├── eda.py                # análisis exploratorio
-│   └── utils.py              # semillas y logging
-├── tests/
-├── .streamlit/config.toml    # temas claro y oscuro del dashboard
-└── requirements.txt
+```bash
+python -m src.train
+python -m src.make_predictions_table
 ```
 
-## Tecnologías
+#### 4. Arrancar el panel
 
-Python · pandas · NumPy · scikit-learn · XGBoost · PyTorch · Matplotlib · Streamlit · pytest
+```bash
+streamlit run app/dashboard.py
+```
+
+Abre el navegador en [http://localhost:8501](http://localhost:8501).
+
+> 💡 Los hiperparámetros, las baterías de test y el umbral de fin de vida (80 %) se configuran en `configs/config.yaml`.
+
+## 🛠️ Tecnologías utilizadas
+
+![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
+![pandas](https://img.shields.io/badge/pandas-150458?logo=pandas&logoColor=white)
+![NumPy](https://img.shields.io/badge/NumPy-013243?logo=numpy&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?logo=scikitlearn&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?logo=pytorch&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)
