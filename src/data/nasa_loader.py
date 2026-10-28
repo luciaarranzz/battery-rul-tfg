@@ -53,6 +53,16 @@ def load_nasa_dataset(raw_dir: str = "data/raw/cleaned_dataset") -> pd.DataFrame
         if discharge.empty:
             continue
 
+        # Descargas iniciales de otro régimen de medida: en algunos grupos las
+        # primeras descargas tienen una capacidad muy inferior a la del resto
+        # de la vida de la batería. La capacidad solo baja con el uso, así que
+        # no es degradación: se descartan mientras su capacidad sea inferior
+        # al 85 % del percentil 95 de las capacidades de esa batería.
+        referencia_alta = discharge["Capacity"].quantile(0.95)
+        primera_valida = int((discharge["Capacity"] >= 0.85 * referencia_alta).to_numpy().argmax())
+        discharge = discharge.iloc[primera_valida:].reset_index(drop=True)
+
+
         # También hay algún ciclo aislado con capacidad ~0 Ah (fallo del
         # sensor durante esa descarga, no una batería muerta de verdad:
         # ninguna celda pasa de un 70-80% de SOH a 0 Ah de un ciclo a otro
@@ -76,11 +86,21 @@ def load_nasa_dataset(raw_dir: str = "data/raw/cleaned_dataset") -> pd.DataFrame
                     cdf["Time"].iloc[-1] - cdf["Time"].iloc[0]
                 )
 
-        # Referencia para el SOH: la capacidad nominal de las celdas (2.0 Ah),
-        # como indicó el tutor, igual para todas las baterías.
+        # Referencia para el SOH: capacidad inicial de cada batería, estimada
+        # como la mediana de sus tres primeras descargas válidas (más robusta
+        # que el primer ciclo solo, que en algunos grupos es anómalo).
 
-        reference_capacity = NOMINAL_CAPACITY_AH
+
+        reference_capacity = float(discharge["Capacity"].iloc[:3].median())
         battery_rows = []
+                # Descargas con capacidad fuera de lo físicamente razonable respecto a
+        # la capacidad inicial: por debajo del 20 % (fallo de medida) o por
+        # encima del 110 % (una celda no supera su capacidad inicial, salvo
+        # ruido o regeneración puntual).
+        discharge = discharge[
+            (discharge["Capacity"] >= 0.20 * reference_capacity)
+            & (discharge["Capacity"] <= 1.10 * reference_capacity)
+        ]
         cycle_idx = 0
 
         for _, row in discharge.iterrows():
@@ -110,12 +130,7 @@ def load_nasa_dataset(raw_dir: str = "data/raw/cleaned_dataset") -> pd.DataFrame
                 "cycle": cycle_idx,
                 "capacity": capacity,
                 "ambient_temp": float(row["ambient_temperature"]),
-                # SOH normalizado respecto a la capacidad MÁXIMA observada
-                # en esta batería (ver nota más arriba): cada grupo de
-                # baterías NASA tiene una capacidad nominal ligeramente
-                # distinta, así que no usamos una constante global como en
-                # el dataset sintético (documentar esta decisión en la
-                # memoria).
+                # SOH respecto a la capacidad inicial de esta batería.
                 "soh": capacity / reference_capacity * 100,
                 "charge_time": charge_time,
                 "time_arr": time_arr,
