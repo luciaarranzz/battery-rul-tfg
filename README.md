@@ -1,10 +1,14 @@
 # 🔋 Battery RUL
 
-![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
-![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?logo=scikitlearn&logoColor=white)
-![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?logo=pytorch&logoColor=white)
-![XGBoost](https://img.shields.io/badge/XGBoost-337AB7)
-![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)
+[![Quality gate](https://sonarcloud.io/api/project_badges/measure?project=luciaarranzz_battery-rul-tfg&metric=alert_status)](https://sonarcloud.io/project/overview?id=luciaarranzz_battery-rul-tfg)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=luciaarranzz_battery-rul-tfg&metric=bugs)](https://sonarcloud.io/project/overview?id=luciaarranzz_battery-rul-tfg)
+[![Code smells](https://sonarcloud.io/api/project_badges/measure?project=luciaarranzz_battery-rul-tfg&metric=code_smells)](https://sonarcloud.io/project/overview?id=luciaarranzz_battery-rul-tfg)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=luciaarranzz_battery-rul-tfg&metric=vulnerabilities)](https://sonarcloud.io/project/overview?id=luciaarranzz_battery-rul-tfg)
+[![Duplicated lines](https://sonarcloud.io/api/project_badges/measure?project=luciaarranzz_battery-rul-tfg&metric=duplicated_lines_density)](https://sonarcloud.io/project/overview?id=luciaarranzz_battery-rul-tfg)
+[![Security](https://sonarcloud.io/api/project_badges/measure?project=luciaarranzz_battery-rul-tfg&metric=security_rating)](https://sonarcloud.io/project/overview?id=luciaarranzz_battery-rul-tfg)
+[![Reliability](https://sonarcloud.io/api/project_badges/measure?project=luciaarranzz_battery-rul-tfg&metric=reliability_rating)](https://sonarcloud.io/project/overview?id=luciaarranzz_battery-rul-tfg)
+[![Maintainability](https://sonarcloud.io/api/project_badges/measure?project=luciaarranzz_battery-rul-tfg&metric=sqale_rating)](https://sonarcloud.io/project/overview?id=luciaarranzz_battery-rul-tfg)
+[![Lines of code](https://sonarcloud.io/api/project_badges/measure?project=luciaarranzz_battery-rul-tfg&metric=ncloc)](https://sonarcloud.io/project/overview?id=luciaarranzz_battery-rul-tfg)
 
 **Battery RUL** estima el **estado de salud (SOH)** y la **vida útil restante (RUL)** de baterías de iones de litio mediante aprendizaje automático, a partir de los datos de envejecimiento del repositorio NASA PCoE. Incluye un **panel de monitorización** en Streamlit donde se compara la predicción de varios algoritmos con el valor real, ciclo a ciclo.
 
