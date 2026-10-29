@@ -22,7 +22,7 @@ Trabajo de Fin de Grado del Grado en Ingeniería Informática, Universidad de Bu
 #### 1. Descargar el código fuente
 
 ```bash
-git clone https://github.com/USUARIO/battery-rul-tfg.git
+git clone https://github.com/luciaarranzz/battery-rul-tfg.git
 cd battery-rul-tfg
 ```
 
