@@ -22,7 +22,7 @@ Trabajo de Fin de Grado del Grado en Ingeniería Informática, Universidad de Bu
 #### 1. Descargar el código fuente
 
 ```bash
-git clone https://github.com/<usuario>/battery-rul-tfg.git
+git clone https://github.com/USUARIO/battery-rul-tfg.git
 cd battery-rul-tfg
 ```
 
@@ -37,7 +37,7 @@ pip install -r requirements.txt
 
 #### 3. Obtener los datos y generar las predicciones
 
-Descarga el dataset [NASA Battery Dataset](https://www.kaggle.com/datasets/patrickfleith/nasa-battery-dataset) y colócalo en la ruta indicada en `configs/config.yaml`. Después, entrena los modelos y genera la tabla de predicciones que lee el panel:
+Descarga el dataset [NASA Battery Dataset](https://www.kaggle.com/datasets/patrickfleith/nasa-battery-dataset) y descomprímelo en `data/raw/`, de forma que exista la carpeta `data/raw/cleaned_dataset/` (la ruta se puede cambiar en `configs/config.yaml`). Después, entrena los modelos y genera la tabla de predicciones que lee el panel:
 
 ```bash
 python -m src.train
