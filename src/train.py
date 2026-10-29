@@ -5,6 +5,7 @@ Uso:
     python -m src.train --config configs/config.yaml
 """
 import argparse
+from pathlib import Path
 
 import yaml
 
@@ -16,9 +17,23 @@ from src.utils import get_logger, set_seed
 
 log = get_logger(__name__)
 
+# Carpeta de la que se permite leer la configuración (raíz del proyecto/configs).
+CONFIG_DIR = (Path(__file__).resolve().parent.parent / "configs").resolve()
+
 
 def load_config(path: str) -> dict:
-    with open(path, encoding="utf-8") as f:
+    """Carga un archivo YAML de configuración.
+
+    Solo se aceptan archivos .yaml/.yml situados dentro de la carpeta
+    `configs/` del proyecto, para evitar leer rutas arbitrarias pasadas por
+    línea de comandos.
+    """
+    config_path = Path(path).resolve()
+    if config_path.suffix.lower() not in (".yaml", ".yml"):
+        raise ValueError(f"El archivo de configuración debe ser .yaml o .yml: {path}")
+    if not config_path.is_relative_to(CONFIG_DIR):
+        raise ValueError(f"El archivo de configuración debe estar dentro de {CONFIG_DIR}: {path}")
+    with open(config_path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
