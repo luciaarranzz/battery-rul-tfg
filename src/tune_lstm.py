@@ -16,9 +16,11 @@ log = get_logger(__name__)
 
 # Cada variante modifica solo lo que se indica; el resto sale del YAML.
 VARIANTES = {
-    "seq_5": {"sequence_length": 5},
-    "seq_3": {"sequence_length": 3},
-    "seq_5_h64": {"sequence_length": 5, "hidden_size": 64},
+    "base": {},
+    "seq_10": {"sequence_length": 10},
+    "hidden_32": {"hidden_size": 32},
+    "epochs_40": {"epochs": 40},
+    "lr_0.001": {"lr": 0.001},
 }
 
 def main(config_path: str = "configs/config.yaml"):

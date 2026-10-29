@@ -11,7 +11,8 @@ data:
   # Parámetros del generador sintético (solo se usan si source: synthetic).
   n_batteries: 24
   n_cycles: 300
-  eol_threshold: 0.80        # umbral de fin de vida (80% de la capacidad del primer ciclo)
+  # Umbral de fin de vida: 80 % de la capacidad inicial de cada batería.
+  eol_threshold: 0.80
   # Baterías reservadas para test (por id). Una por cada grupo experimental
   # del dataset NASA (05-06-07-18, 25-28, 29-32, 33-34-36, 38-40, 41-44,
   # 45-48, 49-52, 53-56), para que el test cubra condiciones distintas
@@ -20,21 +21,25 @@ data:
 
 target: soh                   # "soh" o "rul"
 
+# Hiperparámetros elegidos solo con validación cruzada agrupada por batería
+# sobre las baterías de train (src/tune_*.py); el test no interviene.
 models:
   random_forest:
     n_estimators: 300
     max_depth: 12
-  xgboost:
-    n_estimators: 300
-    max_depth: 4
-    learning_rate: 0.05
+
   lstm:
     hidden_size: 64
     n_layers: 1
-    sequence_length: 5
+    sequence_length: 10
     epochs: 80
     lr: 0.005
     batch_size: 64
+
+  xgboost:
+    n_estimators: 500
+    max_depth: 4
+    learning_rate: 0.03
 
 output:
   results_dir: results

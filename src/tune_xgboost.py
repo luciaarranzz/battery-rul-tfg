@@ -1,11 +1,13 @@
 """Búsqueda de hiperparámetros para XGBoost, usando la misma validación
 cruzada agrupada por batería que src/cross_validate.py.
 
-Prueba un conjunto pequeño de combinaciones de hiperparámetros razonables
-(partiendo de los valores actuales en configs/config.yaml) y muestra cuál
-da mejor R² medio en el conjunto de train, para elegir los hiperparámetros
-finales antes de evaluar contra las baterías de test.
+Prueba un conjunto pequeño de combinaciones de hiperparámetros y muestra
+cuál da mejor R² medio en el conjunto de train, para elegir los
+hiperparámetros finales antes de evaluar contra las baterías de test.
+Los resultados se guardan en results/xgboost_tuning.csv.
 """
+from pathlib import Path
+
 import pandas as pd
 from sklearn.model_selection import GroupKFold
 
@@ -18,14 +20,18 @@ from src.utils import get_logger, set_seed
 log = get_logger(__name__)
 
 
+# Segunda ronda: en la primera, la mejor profundidad fue la más baja
+# probada (4), así que se exploran profundidades menores. Se incluyen las
+# dos mejores de la primera ronda como referencia.
 CANDIDATE_PARAMS = [
-    {"n_estimators": 300, "max_depth": 6, "learning_rate": 0.05},  # actual (config.yaml)
-    {"n_estimators": 500, "max_depth": 6, "learning_rate": 0.03},
-    {"n_estimators": 300, "max_depth": 4, "learning_rate": 0.05},
-    {"n_estimators": 300, "max_depth": 8, "learning_rate": 0.05},
-    {"n_estimators": 150, "max_depth": 6, "learning_rate": 0.1},
-    {"n_estimators": 500, "max_depth": 4, "learning_rate": 0.03},
+    {"n_estimators": 500, "max_depth": 4, "learning_rate": 0.03},  # mejor de la ronda 1
+    {"n_estimators": 300, "max_depth": 4, "learning_rate": 0.05},  # ronda 1 (config actual)
+    {"n_estimators": 300, "max_depth": 3, "learning_rate": 0.05},
+    {"n_estimators": 500, "max_depth": 3, "learning_rate": 0.03},
+    {"n_estimators": 300, "max_depth": 2, "learning_rate": 0.05},
+    {"n_estimators": 500, "max_depth": 2, "learning_rate": 0.03},
 ]
+
 
 def evaluate_params(train_df: pd.DataFrame, params: dict, target: str = "soh", n_splits: int = 5) -> dict:
     X, y, groups = build_feature_matrix(train_df, target=target)
@@ -66,6 +72,10 @@ def main(config_path: str = "configs/config.yaml"):
 
     results_df = pd.DataFrame(results).sort_values("R2_mean", ascending=False)
     log.info("Resultados ordenados por R2_mean (mejor primero):\n%s", results_df.round(3))
+
+    out_dir = Path(cfg["output"]["results_dir"])
+    out_dir.mkdir(parents=True, exist_ok=True)
+    results_df.to_csv(out_dir / "xgboost_tuning.csv", index=False)
     return results_df
 
 
