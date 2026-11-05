@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import numpy as np
 
 EOL_SOH = 80.0  # % de SOH que marca el fin de vida
-VENTANA = 30  # últimos ciclos que se usan para calcular la tendencia
+VENTANA = 60  # últimos ciclos que se usan para calcular la tendencia
 MIN_PUNTOS = 10  # mínimo de ciclos para fiarse de la tendencia
 MIN_PENDIENTE = 0.001  # puntos de SOH por ciclo; por debajo no hay degradación apreciable
 N_ERRORES = 2  # la pendiente tiene que superar N_ERRORES veces su error típico para fiarse de ella
