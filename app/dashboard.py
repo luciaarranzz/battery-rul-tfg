@@ -11,8 +11,6 @@ from cars import CARS, car_html
 
 CSV_PATH = Path(__file__).resolve().parents[1] / "results" / "predictions.csv"
 
-st.set_page_config(page_title="Monitorización de baterías", layout="wide")
-
 
 @st.cache_data
 def load_predictions(path):
