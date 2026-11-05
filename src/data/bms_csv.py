@@ -45,6 +45,11 @@ class ResultadoCSV:
 def _ciclos_vacios() -> pd.DataFrame:
     return pd.DataFrame(columns=COLUMNAS_CICLOS)
 
+def _intervalo(minimo: float, maximo: float, unidad: str) -> str:
+    """Texto del intervalo observado; si es un único valor, lo da una sola vez."""
+    if round(minimo, 1) == round(maximo, 1):
+        return f"{minimo:.1f} {unidad}"
+    return f"{minimo:.1f} a {maximo:.1f} {unidad}"
 
 def _motivo_descarte(g: pd.DataFrame) -> str | None:
     """Devuelve por qué hay que descartar un ciclo, o None si es válido."""
@@ -54,10 +59,16 @@ def _motivo_descarte(g: pd.DataFrame) -> str | None:
         return "el tiempo no es siempre creciente"
     v_min, v_max = g["voltaje_v"].min(), g["voltaje_v"].max()
     if v_min < RANGO_VOLTAJE[0] or v_max > RANGO_VOLTAJE[1]:
-        return f"voltaje fuera de rango ({v_min:.1f} a {v_max:.1f} V)"
+                return (
+            f"voltaje fuera de rango ({_intervalo(v_min, v_max, 'V')}; "
+            f"se admite de {RANGO_VOLTAJE[0]} a {RANGO_VOLTAJE[1]} V)"
+        )
     t_min, t_max = g["temperatura_c"].min(), g["temperatura_c"].max()
     if t_min < RANGO_TEMPERATURA[0] or t_max > RANGO_TEMPERATURA[1]:
-        return f"temperatura fuera de rango ({t_min:.1f} a {t_max:.1f} °C)"
+                return (
+            f"temperatura fuera de rango ({_intervalo(t_min, t_max, '°C')}; "
+            f"se admite de {RANGO_TEMPERATURA[0]} a {RANGO_TEMPERATURA[1]} °C)"
+        )
     if g["tiempo_carga_s"].iloc[0] <= 0:
         return "el tiempo de carga no es positivo"
     return None
