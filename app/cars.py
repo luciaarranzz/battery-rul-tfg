@@ -43,7 +43,7 @@ CARS = {
 
 # Los colores de cada tema (los mismos que .streamlit/config.toml).
 PALETTES = {
-    "light": {"bg": "#FFFFFF", "ink": "#1B1B1F", "muted": "#6B6B72", "accent": "#E8590C", "bad": "#D64545"},
+    "light": {"bg": "#F6F5FF", "ink": "#1F1B3A", "muted": "#6B6890", "accent": "#14B8A6", "bad": "#F2644E"},
     "dark": {"bg": "#16181D", "ink": "#ECEAE4", "muted": "#9A9CA3", "accent": "#FFB020", "bad": "#FF5A4E"},
 }
 

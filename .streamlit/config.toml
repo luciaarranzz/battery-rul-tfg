@@ -1,11 +1,12 @@
-[theme.light]
-primaryColor = "#E8590C"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F1F0EC"
-textColor = "#1B1B1F"
-
-[theme.dark]
+[theme]
+base = "dark"
 primaryColor = "#FFB020"
 backgroundColor = "#16181D"
-secondaryBackgroundColor = "#20232A"
+secondaryBackgroundColor = "#1E2128"
 textColor = "#ECEAE4"
+borderColor = "#2E323B"
+baseRadius = "0.75rem"
+font = "sans-serif"
+
+[client]
+toolbarMode = "minimal"

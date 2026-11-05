@@ -24,7 +24,7 @@ def pedir_matricula() -> str | None:
             value=st.session_state.get("matricula_actual", ""),
             placeholder="1234 BCD",
         )
-        enviado = st.form_submit_button("Continuar")
+        enviado = st.form_submit_button("Continuar", type="primary")
     if enviado:
         st.session_state["matricula_actual"] = entrada
 
@@ -48,8 +48,7 @@ def grafica(historial: pd.DataFrame):
     if (st.context.theme.type or "light") == "dark":
         color_soh, color_tendencia, color_umbral = "#FFB020", "#ECEAE4", "#FF5A4E"
     else:
-        color_soh, color_tendencia, color_umbral = "#E8590C", "#1B1B1F", "#D64545"
-
+        color_soh, color_tendencia, color_umbral = "#6C4BD8", "#1F1B3A", "#F2644E"
     linea = (
         alt.Chart(historial)
         .mark_line(strokeWidth=2.5, color=color_soh)
@@ -148,7 +147,7 @@ def subir_lecturas(conn, usuario: dict, matricula: str, tipo: str):
     if repetidos:
         st.info(f"{len(repetidos)} de esos ciclos ya estaban guardados y se sustituirán.")
 
-    if st.button("Guardar lecturas y calcular"):
+    if st.button("Guardar lecturas y calcular", type="primary"):
         try:
             guardados = servicio.guardar_lecturas(conn, usuario, matricula, tipo, ciclos)
         except (ValueError, PermissionError) as exc:
