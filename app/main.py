@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # para poder impor
 import estilo  # noqa: E402
 from src import db, seed_demo  # noqa: E402
 
-st.set_page_config(page_title="Battery RUL", layout="wide")
+st.set_page_config(page_title="", layout="wide")
 
 
 def pagina_login():

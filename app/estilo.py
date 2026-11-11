@@ -121,7 +121,7 @@ LOGO_PEQUENO = LOGO_BATERIA.replace('width="96" height="48"', 'width="48" height
 # El HTML va sin sangrar: con 4 espacios o más, Markdown lo trataría como código.
 HERO = f"""<div class="login-hero">
 {LOGO_BATERIA}
-<h1>Battery RUL</h1>
+<h1>EVcheck</h1>
 <p class="lema">Conoce la salud de la batería de tu vehículo.</p>
 <ul>
 <li>Estado de salud (SOH) estimado ciclo a ciclo</li>

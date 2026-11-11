@@ -1,4 +1,4 @@
-# 🔋 Battery RUL
+# 🔋 EVcheck
 
 [![Quality gate](https://sonarcloud.io/api/project_badges/measure?project=luciaarranzz_battery-rul-tfg&metric=alert_status)](https://sonarcloud.io/project/overview?id=luciaarranzz_battery-rul-tfg)
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=luciaarranzz_battery-rul-tfg&metric=bugs)](https://sonarcloud.io/project/overview?id=luciaarranzz_battery-rul-tfg)
@@ -10,7 +10,7 @@
 [![Maintainability](https://sonarcloud.io/api/project_badges/measure?project=luciaarranzz_battery-rul-tfg&metric=sqale_rating)](https://sonarcloud.io/project/overview?id=luciaarranzz_battery-rul-tfg)
 [![Lines of code](https://sonarcloud.io/api/project_badges/measure?project=luciaarranzz_battery-rul-tfg&metric=ncloc)](https://sonarcloud.io/project/overview?id=luciaarranzz_battery-rul-tfg)
 
-**Battery RUL** estima el **estado de salud (SOH)** y la **vida útil restante (RUL)** de baterías de iones de litio mediante aprendizaje automático, a partir de los datos de envejecimiento del repositorio NASA PCoE.
+**EVcheck** estima el **estado de salud (SOH)** y la **vida útil restante (RUL)** de baterías de iones de litio mediante aprendizaje automático, a partir de los datos de envejecimiento del repositorio NASA PCoE.
 
 Incluye una **aplicación web** en Streamlit con dos vistas según el rol de la cuenta:
 
