@@ -152,6 +152,6 @@ def titulo_login():
 def marca_lateral():
     """Logo y nombre de la aplicación en la parte superior de la barra lateral."""
     st.markdown(
-        f'<div class="marca-lateral">{LOGO_PEQUENO}<span>Battery <b>RUL</b></span></div>',
+        f'<div class="marca-lateral">{LOGO_PEQUENO}<span>EV<b>check</b></span></div>',
         unsafe_allow_html=True,
     )
